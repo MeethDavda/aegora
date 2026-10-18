@@ -516,8 +516,17 @@ func isCLITestRun() bool {
 
 func main() {
 	var configPath string
+	showVersion := flag.Bool("version", false, "print the Aegora version and exit")
 	flag.StringVar(&configPath, "config", "configs/aegora.yaml", "path to configuration file")
 	flag.Parse()
+
+	if *showVersion {
+		// Same variable the /admin/health endpoint reports, so an operator
+		// verifying a deploy sees one version string in both places. No
+		// config file is loaded: this must work before anything runs.
+		fmt.Printf("aegora version %s\n", admin.Version)
+		return
+	}
 
 	cfg, err := config.Load(configPath)
 	if err != nil {
