@@ -281,6 +281,80 @@ func TestParseLogLevel(t *testing.T) {
 	}
 }
 
+func TestRunCheckConfig(t *testing.T) {
+	testdata := filepath.Join("..", "..", "internal", "config", "testdata")
+
+	tests := []struct {
+		name       string
+		path       string
+		env        map[string]string
+		wantCode   int
+		wantStdout string
+		wantStderr string
+	}{
+		{
+			name:       "valid config",
+			path:       filepath.Join(testdata, "valid.yaml"),
+			wantCode:   0,
+			wantStdout: "config OK\n",
+		},
+		{
+			name:       "unknown field is named",
+			path:       filepath.Join(testdata, "invalid-unknown-field.yaml"),
+			wantCode:   1,
+			wantStderr: "extra_typo_field",
+		},
+		{
+			name:       "invalid duration",
+			path:       filepath.Join(testdata, "invalid-duration.yaml"),
+			wantCode:   1,
+			wantStderr: "bogus",
+		},
+		{
+			name:       "missing file",
+			path:       filepath.Join(t.TempDir(), "missing.yaml"),
+			wantCode:   1,
+			wantStderr: "read file",
+		},
+		{
+			name:       "invalid env override",
+			path:       filepath.Join(testdata, "valid.yaml"),
+			env:        map[string]string{"AEGORA_SERVER_READ_TIMEOUT": "bogus"},
+			wantCode:   1,
+			wantStderr: "AEGORA_SERVER_READ_TIMEOUT",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
+			var stdout, stderr bytes.Buffer
+			code := runCheckConfig(tt.path, &stdout, &stderr)
+
+			if code != tt.wantCode {
+				t.Fatalf("runCheckConfig() = %d, want %d (stderr: %q)", code, tt.wantCode, stderr.String())
+			}
+			if tt.wantStdout != "" && stdout.String() != tt.wantStdout {
+				t.Errorf("stdout = %q, want %q", stdout.String(), tt.wantStdout)
+			}
+			if tt.wantCode == 0 && stderr.Len() != 0 {
+				t.Errorf("stderr = %q, want empty", stderr.String())
+			}
+			if tt.wantCode != 0 {
+				if stdout.Len() != 0 {
+					t.Errorf("stdout = %q, want empty on failure", stdout.String())
+				}
+				if !strings.Contains(stderr.String(), tt.wantStderr) {
+					t.Errorf("stderr = %q, want it to contain %q", stderr.String(), tt.wantStderr)
+				}
+			}
+		})
+	}
+}
+
 func TestBuildHandler_AccessLogging(t *testing.T) {
 	cfg := newTestConfig()
 	var buf bytes.Buffer
