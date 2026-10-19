@@ -3,6 +3,7 @@ server:
   read_timeout: "30s"
   write_timeout: "30s"
   idle_timeout: "60s"
+  # max_request_body_bytes: 10485760 # 10 MB; unset or 0 = unlimited
 
 routes:
   - name: "api-service"
@@ -25,7 +26,7 @@ observability:
   metrics_addr: "127.0.0.1:9090"
   tracing:
     enabled: false
-    exporter: "stdout"   # or "otlp"
+    exporter: "stdout" # or "otlp"
     otlp_endpoint: "localhost:4318"
     sample_ratio: 1.0
 
@@ -68,11 +69,9 @@ shedding:
 
 cache:
   enabled: false
-  ttl: "60s"              # L1 TTL
+  ttl: "60s" # L1 TTL
   l2_enabled: false
   l2_ttl: "5m"
   redis_addr: "127.0.0.1:6379"
   max_entries: 10000
   max_body_bytes: 1048576
-
-

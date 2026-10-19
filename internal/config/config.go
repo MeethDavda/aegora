@@ -129,6 +129,9 @@ type ServerConfig struct {
 	ReadTimeout  Duration `yaml:"read_timeout"`
 	WriteTimeout Duration `yaml:"write_timeout"`
 	IdleTimeout  Duration `yaml:"idle_timeout"`
+	// MaxRequestBodyBytes caps the size of incoming request bodies.
+	// Zero (the default) means unlimited.
+	MaxRequestBodyBytes int64 `yaml:"max_request_body_bytes,omitempty"`
 }
 
 // RouteConfig specifies upstream routing rules and target destinations.
@@ -253,6 +256,10 @@ func (c *Config) Validate() error {
 
 	if c.Server.IdleTimeout <= 0 {
 		return fmt.Errorf("config: server.idle_timeout: must be positive, got %s", c.Server.IdleTimeout)
+	}
+
+	if c.Server.MaxRequestBodyBytes < 0 {
+		return fmt.Errorf("config: server.max_request_body_bytes: must be non-negative, got %d", c.Server.MaxRequestBodyBytes)
 	}
 
 	if len(c.Routes) == 0 {

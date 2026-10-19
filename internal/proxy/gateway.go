@@ -132,6 +132,13 @@ func NewGateway(routes []RouteConfig, rc ReliabilityConfig) (*Gateway, error) {
 					writeJSONError(w, http.StatusServiceUnavailable, `{"error":"service unavailable"}`)
 					return
 				}
+				// A chunked body that exceeded server.max_request_body_bytes mid-stream is a
+				// client fault: answer 413 and leave the upstream's passive health untouched.
+				var maxBytesErr *http.MaxBytesError
+				if errors.As(err, &maxBytesErr) {
+					writeJSONError(w, http.StatusRequestEntityTooLarge, `{"error":"request body too large"}`)
+					return
+				}
 				if info, ok := req.Context().Value(upstreamContextKey).(*upstreamInfo); ok && info != nil {
 					if info.pool != nil {
 						info.pool.ReportFailure(info.index)

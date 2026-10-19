@@ -149,6 +149,13 @@ func TestValidate_MutatedNegativeCases(t *testing.T) {
 			wantFieldInErr: "server.idle_timeout",
 		},
 		{
+			name: "negative max request body bytes",
+			mutate: func(c *config.Config) {
+				c.Server.MaxRequestBodyBytes = -1
+			},
+			wantFieldInErr: "server.max_request_body_bytes",
+		},
+		{
 			name: "zero routes configured",
 			mutate: func(c *config.Config) {
 				c.Routes = nil

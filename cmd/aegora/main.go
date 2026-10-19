@@ -278,6 +278,12 @@ func buildAppWithRegistry(cfg *config.Config, logger *slog.Logger, reg *promethe
 		middleware.AccessLog(logger),
 	)
 
+	// Request body limit: reject oversized bodies with 413 before they spend
+	// shedding, rate-limit, or queue capacity. Still logged and counted above.
+	if cfg.Server.MaxRequestBodyBytes > 0 {
+		mws = append(mws, middleware.MaxRequestBody(cfg.Server.MaxRequestBodyBytes))
+	}
+
 	// Adaptive load shedding: shed globally before spending per-key rate-limit
 	// budget or queue capacity. When overloaded, dropping traffic early prevents
 	// starvation of client token buckets and unnecessary queue contention.
@@ -317,13 +323,16 @@ func buildAppWithRegistry(cfg *config.Config, logger *slog.Logger, reg *promethe
 //     with their exact final status code.
 //  5. AccessLog: Positioned after Tracing and Metrics to capture the assigned request_id, and
 //     measure exact routing and handler execution latency while capturing the final HTTP status code.
-//  6. Load Shedding (optional): Positioned immediately after AccessLog and before RateLimit to shed
+//  6. Request Body Limit (optional): Positioned after AccessLog and before Load Shedding so that
+//     oversized bodies (413) are logged and counted but never consume shedding, rate-limit,
+//     or queue capacity, and never reach an upstream.
+//  7. Load Shedding (optional): Positioned immediately after the body limit and before RateLimit to shed
 //     globally before spending per-key rate-limit budget or queue capacity.
-//  7. RateLimit (optional): Positioned between Load Shedding and Cache / mux / gateway to enforce
+//  8. RateLimit (optional): Positioned between Load Shedding and Cache / mux / gateway to enforce
 //     per-key rate limits uniformly on all incoming requests.
-//  8. Cache (optional): Positioned between RateLimit and Queue.Admit so that hits skip
+//  9. Cache (optional): Positioned between RateLimit and Queue.Admit so that hits skip
 //     queueing and backend load (the expensive parts) while per-key rate limiting still applies uniformly.
-//  9. Queue Admission (optional): Positioned between Cache and the upstream gateway to enforce
+//  10. Queue Admission (optional): Positioned between Cache and the upstream gateway to enforce
 //     concurrency limits and CoDel bufferbloat drops on traffic routed to backend targets, while
 //     bypassing /livez and /readyz health probes.
 func buildHandler(cfg *config.Config, logger *slog.Logger) (http.Handler, error) {
@@ -478,6 +487,9 @@ func computeAppliedAndSkipped(oldCfg, newCfg *config.Config) ([]string, []string
 	}
 	if !reflect.DeepEqual(oldCfg.Reliability, newCfg.Reliability) {
 		applied = append(applied, "reliability")
+	}
+	if oldCfg.Server.MaxRequestBodyBytes != newCfg.Server.MaxRequestBodyBytes {
+		applied = append(applied, "max_request_body_bytes")
 	}
 
 	// Sections that require a process restart to take effect

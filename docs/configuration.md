@@ -40,6 +40,12 @@ Defines data-plane network binding and connection timeouts for the primary gatew
 | `read_timeout` | Duration | none (required) | No (Restart) | Maximum duration for reading the entire request, including headers and body (for example, `"30s"`). Must be positive. |
 | `write_timeout` | Duration | none (required) | No (Restart) | Maximum duration before timing out writes of the response (for example, `"30s"`). Must be positive. |
 | `idle_timeout` | Duration | none (required) | No (Restart) | Maximum amount of time to wait for the next request when keep-alives are enabled (for example, `"60s"`). Must be positive. |
+| `max_request_body_bytes` | int64 | `0` (unlimited) | Yes | Maximum request body size in bytes (for example, `10485760` for 10 MB). Requests exceeding it are rejected with `413 {"error":"request body too large"}` and never reach the queue or upstream. Must be non-negative. |
+
+Request body limit behavior:
+- A declared `Content-Length` above the limit is rejected immediately, before admission queueing or proxying.
+- Bodies without a declared length (chunked transfer encoding) are cut off once they exceed the limit, and the gateway responds with `413`.
+- Rejections are still recorded by metrics and the access log.
 
 Environment variable overrides:
 - `AEGORA_SERVER_ADDR`
