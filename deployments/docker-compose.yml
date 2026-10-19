@@ -3,6 +3,8 @@ services:
     build:
       context: ..
       dockerfile: deployments/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
     container_name: aegora-gateway
     ports:
       - "8080:8080"

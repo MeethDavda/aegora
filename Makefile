@@ -1,4 +1,5 @@
 APP_NAME=aegora
+VERSION?=dev
 
 .PHONY: verify
 verify: fmt tidy lint test build
@@ -24,7 +25,7 @@ build:
 	go build \
 	-trimpath \
 	-buildvcs=true \
-	-ldflags="-s -w" \
+	-ldflags="-s -w -X github.com/syncronix-labs/aegora/internal/admin.Version=$(VERSION)" \
 	-o bin/$(APP_NAME) \
 	./cmd/aegora
 
@@ -42,7 +43,7 @@ tidy:
 
 .PHONY: docker-build
 docker-build:
-	docker build -f deployments/Dockerfile -t aegora:local .
+	docker build -f deployments/Dockerfile --build-arg VERSION=$(VERSION) -t aegora:local .
 
 .PHONY: compose-up
 compose-up:
