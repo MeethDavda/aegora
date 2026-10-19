@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -514,9 +515,22 @@ func isCLITestRun() bool {
 	return strings.Contains(string(commOut), "test.test")
 }
 
+// runCheckConfig validates the config file at path through the same config.Load
+// path used at startup (strict YAML, env overrides, Validate) without building
+// handlers or binding any listeners. It returns the process exit code.
+func runCheckConfig(path string, stdout, stderr io.Writer) int {
+	if _, err := config.Load(path); err != nil {
+		_, _ = fmt.Fprintf(stderr, "error loading config: %v\n", err)
+		return 1
+	}
+	_, _ = fmt.Fprintln(stdout, "config OK")
+	return 0
+}
+
 func main() {
 	var configPath string
 	showVersion := flag.Bool("version", false, "print the Aegora version and exit")
+	checkConfig := flag.Bool("check-config", false, "validate the configuration file and exit")
 	flag.StringVar(&configPath, "config", "configs/aegora.yaml", "path to configuration file")
 	flag.Parse()
 
@@ -526,6 +540,12 @@ func main() {
 		// config file is loaded: this must work before anything runs.
 		fmt.Printf("aegora version %s\n", admin.Version)
 		return
+	}
+
+	if *checkConfig {
+		// Dry run for operators and CI: validate exactly as startup would,
+		// then exit before any server, queue, or tracer is created.
+		os.Exit(runCheckConfig(configPath, os.Stdout, os.Stderr))
 	}
 
 	cfg, err := config.Load(configPath)

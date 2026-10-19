@@ -165,6 +165,12 @@ make compose-down
 
 Aegora is configured through YAML files, with optional overrides via environment variables (`AEGORA_*`). The full configuration specification is located in [configs/aegora.yaml](configs/aegora.yaml).
 
+Validate a config file without starting the gateway (useful in CI):
+
+```bash
+aegora --check-config --config configs/aegora.yaml   # prints "config OK" or the invalid field, exits non-zero on error
+```
+
 Here is a minimal annotated example configuring a listener, an upstream route, and client rate limiting:
 
 ```yaml

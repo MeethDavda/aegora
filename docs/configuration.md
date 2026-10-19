@@ -6,6 +6,21 @@ This document details every section, field, type, default value, validation rule
 
 ---
 
+## Validating a Configuration
+
+Use `--check-config` to validate a configuration file without starting the gateway. It runs the same loading path as startup (strict YAML decoding that rejects unknown fields, `AEGORA_*` environment overrides, and all validation rules below), then exits without binding any listeners.
+
+```bash
+aegora --check-config --config /etc/aegora/aegora.yaml
+```
+
+- **Valid**: prints `config OK` to stdout and exits `0`.
+- **Invalid**: prints the error, naming the offending field (for example, `config: routes[0].lb: must be one of round_robin, least_connections; got "random"`), to stderr and exits `1`.
+
+This makes it suitable as a CI or pre-deploy gate, for example before `docker compose up` or before triggering `POST /admin/reload`.
+
+---
+
 ## Reload Behavior Summary
 
 Aegora supports runtime configuration reloads via `POST /admin/reload` on the admin server (port `9091`). When triggered, Aegora parses and validates the file from disk, builds a replacement middleware chain, and atomically swaps the active handler.
