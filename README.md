@@ -103,6 +103,14 @@ Alternatively, run Docker Compose directly:
 docker compose -f deployments/docker-compose.yml up --build -d
 ```
 
+### Building a Versioned Image
+
+The Dockerfile accepts a `VERSION` build argument (default `dev`) that is stamped into the binary and reported by `aegora --version` and `GET /admin/health`:
+
+```bash
+docker build -f deployments/Dockerfile --build-arg VERSION=v0.1.0 -t aegora:v0.1.0 .
+```
+
 ### Verify Operations
 
 Send a request through the gateway to verify routing and load balancing:

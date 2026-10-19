@@ -271,6 +271,30 @@ func TestCacheMiddleware_HitAndBackendCallCount(t *testing.T) {
 	}
 }
 
+func TestCacheMiddleware_NormalizesQueryParameterOrder(t *testing.T) {
+	store := NewCache(10, 1024)
+	var callCount atomic.Int32
+	handler := CacheMiddleware(store, time.Minute, 1024)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount.Add(1)
+		_, _ = w.Write([]byte("response-data"))
+	}))
+
+	first := httptest.NewRecorder()
+	handler.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/resource?b=2&a=1&a=3", nil))
+	second := httptest.NewRecorder()
+	handler.ServeHTTP(second, httptest.NewRequest(http.MethodGet, "/resource?a=1&a=3&b=2", nil))
+
+	if first.Header().Get("X-Cache") != "MISS" {
+		t.Fatalf("first X-Cache = %q, want MISS", first.Header().Get("X-Cache"))
+	}
+	if second.Header().Get("X-Cache") != "HIT" {
+		t.Fatalf("second X-Cache = %q, want HIT", second.Header().Get("X-Cache"))
+	}
+	if calls := callCount.Load(); calls != 1 {
+		t.Fatalf("backend calls = %d, want 1", calls)
+	}
+}
+
 func TestCacheMiddleware_POSTBypasses(t *testing.T) {
 	store := NewCache(10, 1024)
 	var callCount atomic.Int32

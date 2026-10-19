@@ -228,7 +228,7 @@ func Middleware(store Store, ttl time.Duration, maxBodyBytes int) middleware.Mid
 				return
 			}
 
-			cacheKey := r.Method + " " + r.URL.EscapedPath() + "?" + r.URL.RawQuery
+			cacheKey := requestCacheKey(r)
 
 			// Attempt cache hit
 			if entry, hit := store.Get(cacheKey); hit {
@@ -315,6 +315,12 @@ func Middleware(store Store, ttl time.Duration, maxBodyBytes int) middleware.Mid
 			rw.flushToUnderlying()
 		})
 	}
+}
+
+// requestCacheKey returns a stable cache key for a request. Query values are
+// encoded in key order so equivalent query strings share a cache entry.
+func requestCacheKey(r *http.Request) string {
+	return r.Method + " " + r.URL.EscapedPath() + "?" + r.URL.Query().Encode()
 }
 
 // CacheMiddleware is an explicit alias for Middleware to support conventional naming.
